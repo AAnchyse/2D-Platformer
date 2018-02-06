@@ -87,6 +87,7 @@
     <Compile Include="Assets\ArmRotation.cs" />
     <Compile Include="Assets\Parallaxing.cs" />
     <Compile Include="Assets\Tiling.cs" />
+    <Compile Include="Assets\Weapon.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Standard Assets\CrossPlatformInput\CrossPlatformInputGuidelines.txt" />
