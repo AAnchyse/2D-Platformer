@@ -32,6 +32,8 @@ public class EnnemyAI : MonoBehaviour {
 
     private int currentWayPoint = 0;
 
+    private bool searchingForPlayer = false;
+
     void Start()
     {
         seeker = GetComponent<Seeker>();
@@ -39,7 +41,12 @@ public class EnnemyAI : MonoBehaviour {
 
         if(target==null)
         {
-            Debug.LogError("No player found");
+            if(!searchingForPlayer)
+            {
+                searchingForPlayer = true;
+                StartCoroutine(SearchForPlayer());
+            }
+            return;
         }
         //Start a new path to the target position, return the result to the OnPathComplete method
         seeker.StartPath(transform.position, target.position, OnPathComplete);
@@ -47,13 +54,36 @@ public class EnnemyAI : MonoBehaviour {
         StartCoroutine(UpdatePath());
     }
 
-    IEnumerator UpdatePath()
+    IEnumerator SearchForPlayer()
     {
-        if(target==null)
+        GameObject sResult = GameObject.FindGameObjectWithTag("Player");
+        if(sResult==null)
         {
-            //TODO Insert a player search here
+            yield return new WaitForSeconds(0.5f);
+            StartCoroutine(SearchForPlayer());
+        }
+        else
+        {
+            target = sResult.transform;
+            searchingForPlayer = false;
+            StartCoroutine(UpdatePath());
             yield break;
         }
+        
+    }
+
+    IEnumerator UpdatePath()
+    {
+        if (target == null)
+        {
+            if (!searchingForPlayer)
+            {
+                searchingForPlayer = true;
+                StartCoroutine(SearchForPlayer());
+            }
+            yield break;
+        }
+
         seeker.StartPath(transform.position, target.position, OnPathComplete);
 
         yield return new WaitForSeconds(1f / updateRate);
@@ -75,13 +105,17 @@ public class EnnemyAI : MonoBehaviour {
     {
         if (target == null)
         {
-            //TODO Insert a player search here
+            if (!searchingForPlayer)
+            {
+                searchingForPlayer = true;
+                StartCoroutine(SearchForPlayer());
+            }
             return;
         }
 
         //TODO Always look at player?
 
-        if(path==null)
+        if (path==null)
         {
             return;
         }
