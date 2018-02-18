@@ -10,8 +10,14 @@ public class Weapon : MonoBehaviour {
 
     public Transform BulletTrailPrefab;
     public Transform MuzzleFlashPrefab;
+    public Transform HitPrefab;
     float timeToSpawEffect = 0;
     public float effectSpawnRate = 10;
+
+    //handle camera shaking
+    public float CamShakeAmt = 0.05f;
+    public float CamShakeLength = 0.1f;
+    CameraShake camShake;
 
     float timeToFire = 0;
     Transform firePoint;
@@ -24,9 +30,16 @@ public class Weapon : MonoBehaviour {
             Debug.LogError("No FirePoint");
         }
 	}
-	
-	// Update is called once per frame
-	void Update () {
+    private void Start()
+    {
+        camShake = GameMaster.gm.GetComponent<CameraShake>();
+        if (camShake == null)
+            Debug.LogError("No camera shake script found on GM object");
+
+    }
+
+    // Update is called once per frame
+    void Update () {
 		if(fireRate == 0)
         {
             if(Input.GetButton("Fire1"))
@@ -51,11 +64,7 @@ public class Weapon : MonoBehaviour {
         Vector2 firePointPosition = new Vector2(firePoint.position.x, firePoint.position.y);
 
         RaycastHit2D hit = Physics2D.Raycast(firePointPosition, mousePosition- firePointPosition, 100,whatToHit);
-        if(Time.time>=timeToSpawEffect)
-        {
-            Effect();
-            timeToSpawEffect = Time.time + 1 / effectSpawnRate;
-        }
+        
         Debug.DrawLine(firePointPosition, (mousePosition-firePointPosition)*100,Color.cyan);
 
         if(hit.collider!=null)
@@ -68,15 +77,54 @@ public class Weapon : MonoBehaviour {
                 Debug.Log("We hit " + hit.collider.name + "and did" + damage + "damage");
             }
         }
+
+        if (Time.time >= timeToSpawEffect)
+        {
+
+            Vector3 hitPosition;
+            Vector3 hitNormal;
+
+            if (hit.collider == null)
+            {
+                hitPosition = (mousePosition - firePointPosition) * 30;
+                hitNormal = new Vector3(9999, 9999, 9999);
+            }  
+            else
+            {
+                hitPosition = hit.point;
+                hitNormal = hit.normal;
+            }
+                
+            Effect(hitPosition, hitNormal);
+            timeToSpawEffect = Time.time + 1 / effectSpawnRate;
+        }
     }
 
-    void Effect()
+    void Effect(Vector3 hitPosition,Vector3 hitNormal)
     {
-        Instantiate(BulletTrailPrefab,firePoint.position,firePoint.rotation);
+        Transform trail = Instantiate(BulletTrailPrefab,firePoint.position,firePoint.rotation)as Transform;
+        LineRenderer lr = trail.GetComponent<LineRenderer>();
+
+        if(lr!=null)
+        {
+            lr.SetPosition(0,firePoint.position);
+            lr.SetPosition(1, hitPosition);
+        }
+        Destroy(trail.gameObject, 0.04f);
+
+        if(hitNormal!= new Vector3(9999,9999,9999))
+        {
+            Transform hitParticle = Instantiate(HitPrefab,hitPosition,Quaternion.FromToRotation(Vector3.right,hitNormal)) as Transform;
+            Destroy(hitParticle.gameObject, 0.4f);
+        }
+
         Transform clone = Instantiate(MuzzleFlashPrefab, firePoint.position, firePoint.rotation) as Transform;
         clone.parent = firePoint;
         float size = Random.Range(0.6f, 0.9f);
         clone.localScale = new Vector3(size, size, size);
         Destroy(clone.gameObject, 0.02f);
+
+        //Shake the camera
+        camShake.Shake(CamShakeAmt, CamShakeLength);
     }
 }
